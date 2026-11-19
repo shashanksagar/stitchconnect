@@ -60,6 +60,8 @@ Vercel uses Next.js route handlers, not the custom Socket.io server. Set `NEXT_P
 
 `vercel.json` generates Prisma before building and places functions in Singapore alongside the existing Neon project. Use Node.js 24 and Fluid compute. Configure these Vercel production environment variables privately: `DATABASE_URL` (pooled), `NEXTAUTH_URL` (the canonical HTTPS demo URL), `NEXTAUTH_SECRET`, `PAYMENT_SECRET`, `DEMO_MODE=true`, and `NEXT_PUBLIC_CHAT_TRANSPORT=polling`. Session and payment secrets must be random; never place them in client-side environment variables. `DEMO_PASSWORD` is only needed locally for seeding and must be shared privately with demo participants. Do not publish admin credentials on the login screen.
 
+`next.config.ts` explicitly includes Prisma's generated `query_compiler_bg.wasm` in server function file traces. Keep this setting when changing deployment configuration; otherwise database-backed routes can fail with `ENOENT` after a successful build.
+
 Apply migrations with `npm run db:migrate` and seed before deploying. Builds do not run migrations or reset demo data. The direct migration URL is not required in the deployed runtime. New image uploads are private database rows limited to 3 MB each, below Vercel's request/response limit. This small-demo storage approach is not a substitute for object storage at production scale. Legacy local image files remain readable only on the original local server.
 
 The public demo permits customer signup. Only use fictional names, measurements, addresses, and images; seeded accounts share data with anyone given those account credentials. Payments and logistics remain simulated. Process-local throttling is not a distributed abuse-control system; take the demo offline when no longer needed.
