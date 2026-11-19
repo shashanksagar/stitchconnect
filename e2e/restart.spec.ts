@@ -1,0 +1,23 @@
+import { expect, test } from "@playwright/test";
+import { login, png } from "./helpers";
+test("@restart retains delivered order, both payments, messages and image bytes across a server restart", async ({ context, page }) => {
+  await login(context, "customer@stitch.local");
+  const response = await context.request.get("/api/orders");
+  const orders: { id: string; status: string; upfrontPaid: boolean; finalPaid: boolean; payments: { status: string; amount: number }[] }[] = await response.json();
+  const delivered = orders.filter(o => o.status === "DELIVERED");
+  expect(delivered).toHaveLength(1);
+  const order = delivered[0];
+  expect(order.upfrontPaid && order.finalPaid).toBe(true);
+  expect(order.payments.filter(p => p.status === "SUCCEEDED").reduce((n, p) => n + p.amount, 0)).toBe(12000);
+  const messages = await (await context.request.get(`/api/orders/${order.id}/messages`)).json();
+  expect(messages).toHaveLength(1);
+  expect(messages[0].content).toContain("A rounded collar, please.");
+  const image = await context.request.get(messages[0].imageUrl);
+  expect(image.status()).toBe(200);
+  expect(await image.body()).toEqual(png);
+  await page.goto(`/orders/${order.id}`);
+  await expect(page.getByText("DELIVERED", { exact: true })).toBeVisible();
+  await page.goto(`/orders/${order.id}/chat`);
+  await expect(page.getByRole("log")).toContainText(messages[0].content);
+  await expect(page.getByAltText("Shared design attachment")).toBeVisible();
+});

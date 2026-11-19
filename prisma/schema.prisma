@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  TAILOR
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING_PICKUP
+  IN_TRANSIT_TO_TAILOR
+  STITCHING
+  READY_FOR_DELIVERY
+  DELIVERED
+}
+
+enum ShipmentStatus {
+  UNASSIGNED
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+}
+
+enum Leg {
+  FABRIC_PICKUP
+  FINAL_DELIVERY
+}
+
+enum Installment {
+  UPFRONT
+  FINAL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id           String         @id @default(cuid())
+  name         String
+  email        String         @unique
+  passwordHash String
+  role         Role           @default(CUSTOMER)
+  location     String         @default("")
+  avatarUrl    String         @default("")
+  createdAt    DateTime       @default(now())
+  profile      TailorProfile?
+  purchases    Order[]        @relation("CustomerOrders")
+  commissions  Order[]        @relation("TailorOrders")
+  messages     Message[]
+  uploads      Upload[]
+}
+
+model TailorProfile {
+  userId          String @id
+  user            User   @relation(fields: [userId], references: [id])
+  bio             String
+  specialty       String
+  styles          Json
+  basePrice       Int
+  turnaroundDays  Int
+  rating          Float
+  portfolioImages Json
+  workshopAddress Json @default("{}")
+}
+
+model Order {
+  id                 String      @id @default(cuid())
+  customerId         String
+  tailorId           String
+  customer           User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  tailor             User        @relation("TailorOrders", fields: [tailorId], references: [id])
+  garmentType        String
+  measurements       Json
+  referenceImages    Json
+  totalAmount        Int
+  platformFeePercent Int         @default(10)
+  platformFeeAmount  Int
+  tailorPayout       Int
+  currency           String      @default("USD")
+  upfrontPaid        Boolean     @default(false)
+  finalPaid          Boolean     @default(false)
+  status             OrderStatus @default(PENDING_PICKUP)
+  pickupAddress      Json
+  deliveryAddress    Json
+  tailorAddress      Json        @default("{}")
+  checkoutKey        String      @unique
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  messages           Message[]
+  payments           Payment[]
+  shipments          Shipment[]
+  uploads            Upload[]
+
+  @@index([customerId, createdAt])
+  @@index([tailorId, status])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  orderId   String
+  senderId  String
+  order     Order    @relation(fields: [orderId], references: [id])
+  sender    User     @relation(fields: [senderId], references: [id])
+  content   String
+  imageUrl  String?
+  clientKey String   @unique
+  createdAt DateTime @default(now())
+  upload    Upload?
+
+  @@index([orderId, createdAt])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id])
+  installment    Installment
+  amount         Int
+  status         PaymentStatus @default(PENDING)
+  idempotencyKey String        @unique
+  eventId        String?       @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([orderId, installment])
+}
+
+model Shipment {
+  id           String         @id @default(cuid())
+  orderId      String
+  order        Order          @relation(fields: [orderId], references: [id])
+  leg          Leg
+  status       ShipmentStatus @default(UNASSIGNED)
+  courier      String         @default("")
+  contact      String         @default("")
+  tracking     String         @default("")
+  dispatchedAt DateTime?
+  deliveredAt  DateTime?
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([orderId, leg])
+}
+
+model Upload {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id])
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id])
+  messageId String?  @unique
+  message   Message? @relation(fields: [messageId], references: [id])
+  key       String   @unique
+  mime      String
+  size      Int
+  createdAt DateTime @default(now())
+}
