@@ -4,5 +4,5 @@ export default defineConfig({
   expect: { timeout: 15000 },
   use: { baseURL: "http://127.0.0.1:3100", trace: "retain-on-failure", screenshot: "only-on-failure" },
   reporter: [["list"]],
-  webServer: { command: "node --env-file=.env server.ts --production", url: "http://127.0.0.1:3100/api/health", reuseExistingServer: false, timeout: 120000 },
+  webServer: { command: "node --env-file=.env --import=./scripts/set-node-env.mjs server.ts --production", url: "http://127.0.0.1:3100/api/health", reuseExistingServer: false, timeout: 120000 },
 });

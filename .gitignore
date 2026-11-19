@@ -9,3 +9,5 @@ storage/
 playwright-report/
 test-results/
 *.tsbuildinfo
+.neon
+.vercel/

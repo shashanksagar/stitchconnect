@@ -11,6 +11,7 @@ export function Chat({ orderId, userId, initial }: { orderId: string; userId: st
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [connection, setConnection] = useState("Connecting...");
+  const [connectionError, setConnectionError] = useState("");
   const end = useRef<HTMLDivElement>(null);
   const retry = useRef<{ payload: string; key: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -18,6 +19,27 @@ export function Chat({ orderId, userId, initial }: { orderId: string; userId: st
     setHistory(old => [...new Map([...old, ...items].map(m => [m.id, m])).values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)));
   }
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_CHAT_TRANSPORT === "polling") {
+      let active = true;
+      let timer: ReturnType<typeof setTimeout>;
+      async function refresh() {
+        try {
+          const items = await api<Message[]>(`/api/orders/${orderId}/messages`);
+          if (!active) return;
+          merge(items);
+          setConnection("Connected to your atelier - refreshes every 3 seconds");
+          setConnectionError("");
+        } catch (error) {
+          if (!active) return;
+          setConnection("Disconnected - retrying");
+          setConnectionError(errorText(error));
+        } finally {
+          if (active) timer = setTimeout(refresh, 3000);
+        }
+      }
+      void refresh();
+      return () => { active = false; clearTimeout(timer); };
+    }
     const socket = io({ transports: ["websocket", "polling"] });
     socket.on("connect", () => {
       socket.emit("join", orderId, (result: { ok?: boolean; error?: string }) => {
@@ -52,6 +74,7 @@ export function Chat({ orderId, userId, initial }: { orderId: string; userId: st
         try { setImage(await uploadImage(file)); } catch (error) { setError(errorText(error)); } finally { setBusy(false); e.target.value = ""; }
       }} /><button className="btn rust" disabled={busy || (!text.trim() && !image)}><Send size={14} />{busy ? "Sending..." : "Send message"}</button></div>
       {error && <p className="notice error" role="alert">{error}</p>}
+      {connectionError && <p className="notice error" role="alert">{connectionError}</p>}
     </form>
   </section>;
 }

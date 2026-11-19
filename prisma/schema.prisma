@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  engineType = "client"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider  = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum Role {
@@ -163,4 +165,11 @@ model Upload {
   mime      String
   size      Int
   createdAt DateTime @default(now())
+  data      UploadData?
+}
+
+model UploadData {
+  uploadId String @id
+  upload   Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  bytes    Bytes
 }

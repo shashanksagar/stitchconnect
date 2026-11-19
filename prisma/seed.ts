@@ -1,8 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { tailors, workshopAddress } from "../src/lib/demo-data.ts";
+import { createNeonAdapter } from "../src/server/neon-adapter.ts";
 
-const db = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("DATABASE_URL is required. Run neon env pull before seeding.");
+const db = new PrismaClient({ adapter: createNeonAdapter(connectionString) });
 try {
   if (process.env.DEMO_MODE !== "true" || !process.env.DEMO_PASSWORD) {
     throw new Error("Seeding requires DEMO_MODE=true and a local DEMO_PASSWORD.");

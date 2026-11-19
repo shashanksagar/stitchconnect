@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.git
+.next
+storage
+tests
+e2e
+test-results
+playwright-report
+prisma/migrations-sqlite

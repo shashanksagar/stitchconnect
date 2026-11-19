@@ -26,6 +26,6 @@ export function AuthForm({ signup = false }: { signup?: boolean }) {
     {error && <p role="alert" className="notice error">{error}</p>}
     <button className="btn rust" disabled={busy}>{busy ? "Please wait..." : signup ? "Create your account" : "Welcome back"}</button>
     <p className="muted" style={{ fontSize: 12, marginTop: 20 }}>{signup ? "Already found us?" : "New to Stitch Connect?"} <Link href={signup ? "/login" : "/signup"} style={{ textDecoration: "underline" }}>{signup ? "Log in" : "Create an account"}</Link></p>
-    {!signup && <p className="notice">Local demo accounts: customer@stitch.local, tailor1@stitch.local, admin@stitch.local. Use the private DEMO_PASSWORD from your local environment file. No real payments.</p>}
+    {!signup && <p className="notice">Demo accounts: customer@stitch.local, tailor1@stitch.local, admin@stitch.local. Ask the demo owner for credentials, or create a customer account. Use fictional details only. No real payments.</p>}
   </form>;
 }

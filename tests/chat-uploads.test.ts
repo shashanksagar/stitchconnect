@@ -30,7 +30,14 @@ describe("private persistent conversations and images", () => {
     const o = await freshOrder();
     expect(() => imageMime(Buffer.from("<svg onload='alert(1)'/>"))).toThrow("Only JPEG");
     await expect(saveUpload(uploadRequest(new File([png], "fake.jpg", { type: "image/jpeg" })), customer)).rejects.toThrow("do not match");
-    await expect(saveUpload(uploadRequest(new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.png", { type: "image/png" })), customer)).rejects.toThrow("up to 5 MB");
+    const maxImage = Buffer.alloc(3 * 1024 * 1024);
+    png.copy(maxImage);
+    const boundary = await saveUpload(uploadRequest(new File([maxImage], "limit.png", { type: "image/png" })), customer);
+    expect(await db.uploadData.findUnique({ where: { uploadId: boundary.id }, select: { uploadId: true } })).not.toBeNull();
+    expect((await (await readUpload(boundary.id, customer)).arrayBuffer()).byteLength).toBe(maxImage.length);
+    await expect(saveUpload(uploadRequest(new File([new Uint8Array(3 * 1024 * 1024 + 1)], "big.png", { type: "image/png" })), customer)).rejects.toThrow("up to 3 MB");
+    await deleteUpload(boundary.id, customer);
+    expect(await db.uploadData.findUnique({ where: { uploadId: boundary.id } })).toBeNull();
     await expect(sendMessage(o.id, { content: "  ", clientKey: randomUUID() }, customer)).rejects.toThrow();
     const upload = await saveUpload(uploadRequest(new File([png], "unused.png", { type: "image/png" })), customer);
     await expect(deleteUpload(upload.id, stranger)).rejects.toThrow("unattached");
